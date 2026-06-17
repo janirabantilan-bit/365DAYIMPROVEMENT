@@ -87,7 +87,6 @@
             margin-bottom: 24px;
         }
 
-        /* If there's an odd number of tasks, make the first one wide if needed, or keep it neat */
         .task-box {
             background: #222226;
             border: 2px solid #3f3f46;
@@ -182,18 +181,46 @@
         .level-list-item {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             background: #222226;
             padding: 14px 16px;
             border-radius: 12px;
             margin-bottom: 8px;
             border: 1px solid #3f3f46;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .level-list-item:hover {
+            background: #2b2b30;
+        }
+
+        /* Completed levels stand out in beautiful yellow label styling */
+        .level-list-item.completed-level {
+            border-color: var(--primary-yellow);
+            background: rgba(252, 211, 77, 0.05);
         }
 
         .list-level-num { font-weight: bold; }
-        .status-badge { font-size: 0.85rem; padding: 2px 8px; border-radius: 20px; }
-        .badge-done { background: var(--success-green); color: black; }
-        .badge-locked { background: #3f3f46; color: var(--text-muted); }
-        .badge-current { background: var(--primary-yellow); color: black; font-weight: bold; }
+        .status-badge { font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; }
+        .badge-done { background: var(--primary-yellow); color: black; font-weight: bold; }
+        .badge-open { background: #3f3f46; color: white; }
+        .badge-current { background: var(--success-green); color: black; font-weight: bold; }
+
+        /* Preview Window Container inside map */
+        .preview-box {
+            background: #1e1e24;
+            border: 2px solid #3f3f46;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .preview-title {
+            color: var(--primary-yellow);
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -202,12 +229,12 @@
     
     <div id="mainView" class="view active">
         <div class="header">
-            <span style="font-weight: bold; color: var(--text-muted);">365 RPG</span>
+            <span style="font-weight: bold; color: var(--text-muted);" id="viewModeTag">🎮 Game Mode</span>
             <button class="nav-btn" onclick="switchView('listView')">📜 Level Map</button>
         </div>
 
         <div class="level-header">
-            <h1 class="level-title" id="currentLevelTitle">LEVEL 18</h1>
+            <h1 class="level-title" id="currentLevelTitle">LEVEL 1</h1>
             <div class="level-status" id="levelSubtitle">Complete all quests to level up</div>
         </div>
 
@@ -229,9 +256,14 @@
 
     <div id="listView" class="view">
         <div class="header">
-            <h2 class="list-title">Journey Progress</h2>
-            <button class="nav-btn" onclick="switchView('mainView')">🎮 Back to Game</button>
+            <h2 class="list-title">Journey Map</h2>
+            <button class="nav-btn" onclick="returnToMainGame()">🎮 Back to Game</button>
         </div>
+
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top:-10px; margin-bottom:15px;">
+            💡 Tap any level to preview its challenges, interact with them early, or edit your logs!
+        </p>
+
         <div id="levelHistoryList">
             </div>
     </div>
@@ -239,41 +271,80 @@
 </div>
 
 <script>
-    // 1. GAME DATA (Pulled from your exact spreadsheet layout)
-    const challengeData = {
-        18: { tasks: [{text: "190 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
-        19: { tasks: [{text: "190 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
-        20: { tasks: [], isRest: true },
-        21: { tasks: [{text: "200 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
-        22: { tasks: [{text: "200 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
-        23: { tasks: [{text: "200 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
-        24: { tasks: [{text: "250 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
-        25: { tasks: [{text: "250 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false }
-    };
+    // 1. DYNAMIC GAME DATA BUILDER (Levels 1 to 30+)
+    const challengeData = {};
 
-    // 2. APP STATE (Tracks where user currently is)
-    let userCurrentLevel = 18; 
-    let completedTasksThisLevel = [];
+    function generateGameDatabase() {
+        for (let i = 1; i <= 40; i++) {
+            // Rest Days setup
+            if ([7, 14, 20, 27, 34].includes(i)) {
+                challengeData[i] = { tasks: [], isRest: true };
+                continue;
+            }
 
-    // 3. NAVIGATION ENGINE
+            let tasks = [];
+            
+            // Logic for regular levels based on your exact update prompt rules
+            if (i >= 1 && i <= 5) {
+                tasks.push({ text: "200 P.U", icon: "💪" });
+            } else if (i >= 6 && i <= 11) {
+                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "1 DUO", icon: "🦉" });
+            } else if (i >= 12 && i <= 13) {
+                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "1 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
+            } else if (i >= 15 && i <= 16) {
+                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
+            } else if (i >= 17 && i <= 19) {
+                tasks.push({ text: "190 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
+            } else if (i >= 21 && i <= 23) {
+                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
+            } else if (i >= 24 && i <= 26) {
+                tasks.push({ text: "250 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
+            } else if (i >= 28 && i <= 33) {
+                // adding baths incrementally matching spreadsheet columns
+                let levelTasks = [{ text: "250 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" }];
+                if (i >= 30) levelTasks.push({ text: "1 bath", icon: "🛁" });
+                tasks = levelTasks;
+            } else if (i >= 35 && i <= 40) {
+                tasks.push({ text: "250 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" }, { text: "1 bath", icon: "🛁" }, { text: "1 TB", icon: "📚" });
+            }
+
+            challengeData[i] = { tasks: tasks, isRest: false };
+        }
+    }
+    generateGameDatabase();
+
+    // 2. STATE STORAGE MANAGEMENT (Tracks separate completion for all tasks)
+    let mainStoryLevel = 1; // The actual level you are anchored on
+    let viewingLevel = 1;  // The level currently displayed on screen (can change during preview)
+    
+    // Store checklist tracking state globally per level index
+    let completionRegistry = {}; 
+    Object.keys(challengeData).forEach(lvl => {
+        completionRegistry[lvl] = [];
+    });
+
+    // 3. VIEW CONTROLLER
     function switchView(viewId) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
         if(viewId === 'listView') { renderLevelList(); }
     }
 
-    // 4. LOAD CURRENT LEVEL SCREEN
+    function returnToMainGame() {
+        viewingLevel = mainStoryLevel; // Snap interface back to actual user story level
+        document.getElementById("viewModeTag").innerText = "🎮 Game Mode";
+        document.getElementById("viewModeTag").style.color = "var(--text-muted)";
+        loadLevel(mainStoryLevel);
+        switchView('mainView');
+    }
+
+    // 4. INTERACTIVE ENGINE: RENDER TARGET LEVEL
     function loadLevel(levelNum) {
+        viewingLevel = levelNum;
         const levelInfo = challengeData[levelNum];
-        if (!levelInfo) {
-            alert("Congratulations! You've reached the end of the available levels!");
-            return;
-        }
-
+        
         document.getElementById("currentLevelTitle").innerText = `LEVEL ${levelNum}`;
-        document.getElementById("logInput").value = ""; // Clear logs
-        completedTasksThisLevel = [];
-
+        
         const grid = document.getElementById("taskGrid");
         const restCard = document.getElementById("restDayCard");
         const logSec = document.getElementById("logSection");
@@ -283,95 +354,4 @@
             logSec.style.display = "none";
             restCard.style.display = "block";
         } else {
-            grid.style.display = "grid";
-            logSec.style.display = "block";
-            restCard.style.display = "none";
-            grid.innerHTML = "";
-
-            levelInfo.tasks.forEach((task, index) => {
-                const box = document.createElement("div");
-                box.className = "task-box";
-                box.innerHTML = `
-                    <span class="complete-badge">✓ COMPLETE</span>
-                    <span class="task-icon">${task.icon}</span>
-                    <span class="task-text">${task.text}</span>
-                `;
-                box.onclick = () => toggleTask(index, box);
-                grid.appendChild(box);
-            });
-        }
-    }
-
-    // 5. INTERACTIVE TASK CLICKING
-    function toggleTask(index, element) {
-        if (completedTasksThisLevel.includes(index)) return; // Already done
-
-        completedTasksThisLevel.push(index);
-        element.classList.add("completed");
-        
-        // Single task confetti burst
-        confetti({ particleCount: 40, spread: 40, origin: { y: 0.6 } });
-
-        // Check if all level tasks are done
-        const totalTasks = challengeData[userCurrentLevel].tasks.length;
-        if (completedTasksThisLevel.length === totalTasks) {
-            setTimeout(levelUpAnimation, 800);
-        }
-    }
-
-    // 6. REST DAY LEVEL UP
-    function completeRestDay() {
-        levelUpAnimation();
-    }
-
-    // 7. LEVEL UP CELEBRATION
-    function levelUpAnimation() {
-        // Massive screen-wide confetti explosion
-        var duration = 2 * 1000;
-        var end = Date.now() + duration;
-
-        (function frame() {
-            confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 } });
-            confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 } });
-            if (Date.now() < end) { requestAnimationFrame(frame); }
-        }());
-
-        setTimeout(() => {
-            userCurrentLevel++;
-            loadLevel(userCurrentLevel);
-        }, 1500);
-    }
-
-    // 8. RENDER NAVIGATION LIST
-    function renderLevelList() {
-        const container = document.getElementById("levelHistoryList");
-        container.innerHTML = "";
-
-        Object.keys(challengeData).forEach(lvl => {
-            lvl = parseInt(lvl);
-            let statusBadge = "";
-            
-            if (lvl < userCurrentLevel) {
-                statusBadge = '<span class="status-badge badge-done">Completed</span>';
-            } else if (lvl === userCurrentLevel) {
-                statusBadge = '<span class="status-badge badge-current">Active</span>';
-            } else {
-                statusBadge = '<span class="status-badge badge-locked">Locked</span>';
-            }
-
-            const item = document.createElement("div");
-            item.className = "level-list-item";
-            item.innerHTML = `
-                <span class="list-level-num">Level ${lvl} ${challengeData[lvl].isRest ? '🌴' : ''}</span>
-                ${statusBadge}
-            `;
-            container.appendChild(item);
-        });
-    }
-
-    // Initialize first load
-    loadLevel(userCurrentLevel);
-</script>
-
-</body>
-</html>
+            grid.style.display
