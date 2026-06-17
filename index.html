@@ -393,4 +393,114 @@
             restCard.style.display = "block";
         } else {
             grid.style.display = "grid";
-            log
+            logSec.style.display = "block";
+            restCard.style.display = "none";
+            grid.innerHTML = "";
+
+            levelInfo.tasks.forEach((task, index) => {
+                const box = document.createElement("div");
+                box.className = "task-box";
+                
+                if (completionRegistry[levelNum].includes(index)) {
+                    box.classList.add("completed");
+                }
+
+                box.innerHTML = `
+                    <span class="complete-badge">✓ DONE</span>
+                    <span class="task-icon">${task.icon}</span>
+                    <span class="task-text">${task.text}</span>
+                `;
+                box.onclick = () => toggleTask(index, box, levelNum);
+                grid.appendChild(box);
+            });
+        }
+    }
+
+    function toggleTask(index, element, levelNum) {
+        let registry = completionRegistry[levelNum];
+
+        if (registry.includes(index)) {
+            completionRegistry[levelNum] = registry.filter(i => i !== index);
+            element.classList.remove("completed");
+        } else {
+            registry.push(index);
+            element.classList.add("completed");
+            confetti({ particleCount: 35, spread: 40, origin: { y: 0.6 } });
+
+            const totalTasks = challengeData[levelNum].tasks.length;
+            if (registry.length === totalTasks && levelNum === mainStoryLevel) {
+                setTimeout(levelUpCelebration, 600);
+            }
+        }
+    }
+
+    function completeRestDay() {
+        if (viewingLevel === mainStoryLevel) {
+            levelUpCelebration();
+        } else {
+            alert(`Level ${viewingLevel} Rest Day Marked!`);
+        }
+    }
+
+    function levelUpCelebration() {
+        var duration = 1.5 * 1000;
+        var end = Date.now() + duration;
+
+        (function frame() {
+            confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 } });
+            confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 } });
+            if (Date.now() < end) { requestAnimationFrame(frame); }
+        }());
+
+        setTimeout(() => {
+            if (viewingLevel === mainStoryLevel) {
+                mainStoryLevel++;
+                viewingLevel = mainStoryLevel;
+            }
+            loadLevel(viewingLevel);
+        }, 1200);
+    }
+
+    function renderLevelList() {
+        const container = document.getElementById("levelHistoryList");
+        container.innerHTML = "";
+
+        Object.keys(challengeData).forEach(lvl => {
+            lvl = parseInt(lvl);
+            let statusBadge = "";
+            let itemClass = "level-list-item";
+            
+            if (lvl < mainStoryLevel) {
+                statusBadge = '<span class="status-badge badge-done">Done</span>';
+                itemClass += " completed-level";
+            } else if (lvl === mainStoryLevel) {
+                statusBadge = '<span class="status-badge badge-current">Active</span>';
+            } else {
+                statusBadge = '<span class="status-badge badge-open">Preview</span>';
+            }
+
+            const item = document.createElement("div");
+            item.className = itemClass;
+            item.innerHTML = `
+                <span class="list-level-num">Day ${lvl} ${challengeData[lvl].isRest ? '🌴' : ''}</span>
+                ${statusBadge}
+            `;
+            
+            item.onclick = () => {
+                document.getElementById("viewModeTag").innerText = `🔍 Preview Day ${lvl}`;
+                document.getElementById("viewModeTag").style.color = "var(--primary-yellow)";
+                loadLevel(lvl);
+                switchView('mainView');
+            };
+
+            container.appendChild(item);
+        });
+    }
+
+    window.onload = function() {
+        loadLevel(mainStoryLevel);
+    };
+</script>
+
+</body>
+</html>
