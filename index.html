@@ -325,12 +325,22 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            /* Links your uploaded image as the background */
+            background-image: url('background.png'); 
+            /* Centers the image perfectly */
+            background-position: center center; 
+            /* Forces the image to stretch to fit the screen */
+            background-size: cover; 
+            /* Keeps the background locked in place while scrolling */
+            background-attachment: fixed; 
+            /* Fallback color just in case the image takes a second to load */
+            background-color: var(--bg-color); 
             margin: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         .app-container {
