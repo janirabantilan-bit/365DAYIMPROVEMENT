@@ -91,12 +91,17 @@
             background: #222226;
             border: 2px solid #3f3f46;
             border-radius: 16px;
-            padding: 20px;
+            padding: 16px 12px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 105px;
         }
 
         .task-box:hover {
@@ -110,26 +115,27 @@
         }
 
         .task-icon {
-            font-size: 2.5rem;
-            margin-bottom: 8px;
+            font-size: 2rem;
+            margin-bottom: 6px;
             display: block;
         }
 
         .task-text {
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.2;
         }
 
         .complete-badge {
             display: none;
             position: absolute;
-            top: 8px;
+            top: 6px;
             right: 8px;
             background: var(--success-green);
             color: white;
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 8px;
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 5px;
             font-weight: bold;
         }
 
@@ -178,12 +184,18 @@
             margin-bottom: 16px;
         }
 
+        #levelHistoryList {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
         .level-list-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: #222226;
-            padding: 14px 16px;
+            padding: 12px 16px;
             border-radius: 12px;
             margin-bottom: 8px;
             border: 1px solid #3f3f46;
@@ -195,32 +207,16 @@
             background: #2b2b30;
         }
 
-        /* Completed levels stand out in beautiful yellow label styling */
         .level-list-item.completed-level {
             border-color: var(--primary-yellow);
             background: rgba(252, 211, 77, 0.05);
         }
 
         .list-level-num { font-weight: bold; }
-        .status-badge { font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; }
+        .status-badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; }
         .badge-done { background: var(--primary-yellow); color: black; font-weight: bold; }
         .badge-open { background: #3f3f46; color: white; }
         .badge-current { background: var(--success-green); color: black; font-weight: bold; }
-
-        /* Preview Window Container inside map */
-        .preview-box {
-            background: #1e1e24;
-            border: 2px solid #3f3f46;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        .preview-title {
-            color: var(--primary-yellow);
-            margin: 0 0 10px 0;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -242,7 +238,7 @@
             </div>
 
         <div class="rest-day-card" id="restDayCard" style="display: none;">
-            <span style="font-size: 3rem;">🎉</span>
+            <span style="font-size: 3rem;">🌴</span>
             <h2>BONUS REST DAY!</h2>
             <p style="color: var(--text-muted);">Enjoy your well-deserved break.</p>
             <button class="nav-btn" style="background: var(--success-green); color: black; width: 100%;" onclick="completeRestDay()">Claim & Level Up</button>
@@ -256,12 +252,12 @@
 
     <div id="listView" class="view">
         <div class="header">
-            <h2 class="list-title">Journey Map</h2>
+            <h2 class="list-title">Journey Map (365 Days)</h2>
             <button class="nav-btn" onclick="returnToMainGame()">🎮 Back to Game</button>
         </div>
 
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-top:-10px; margin-bottom:15px;">
-            💡 Tap any level to preview its challenges, interact with them early, or edit your logs!
+            💡 Tap any level to preview challenges, interact with them early, or edit your logs!
         </p>
 
         <div id="levelHistoryList">
@@ -271,59 +267,99 @@
 </div>
 
 <script>
-    // 1. DYNAMIC GAME DATA BUILDER (Levels 1 to 30+)
     const challengeData = {};
 
+    // THE 365 SPREADSHEET ENGINE
     function generateGameDatabase() {
-        for (let i = 1; i <= 40; i++) {
-            // Rest Days setup
-            if ([7, 14, 20, 27, 34].includes(i)) {
+        // Precise List of all Rest Days extracted directly from your visual sheet
+        const restDays = [
+            7, 14, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90, 97, 104, 111, 118, 125, 
+            132, 139, 146, 153, 160, 167, 174, 181, 188, 195, 202, 209, 216, 223, 230, 
+            237, 244, 250, 257, 264, 271, 278, 285, 292, 299, 306, 313, 320, 327, 334, 
+            341, 348, 355, 362
+        ];
+
+        for (let i = 1; i <= 365; i++) {
+            if (restDays.includes(i)) {
                 challengeData[i] = { tasks: [], isRest: true };
                 continue;
             }
 
             let tasks = [];
-            
-            // Logic for regular levels based on your exact update prompt rules
-            if (i >= 1 && i <= 5) {
-                tasks.push({ text: "200 P.U", icon: "💪" });
-            } else if (i >= 6 && i <= 11) {
-                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "1 DUO", icon: "🦉" });
-            } else if (i >= 12 && i <= 13) {
-                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "1 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
-            } else if (i >= 15 && i <= 16) {
-                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
-            } else if (i >= 17 && i <= 19) {
-                tasks.push({ text: "190 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
-            } else if (i >= 21 && i <= 23) {
-                tasks.push({ text: "200 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
-            } else if (i >= 24 && i <= 26) {
-                tasks.push({ text: "250 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" });
-            } else if (i >= 28 && i <= 33) {
-                // adding baths incrementally matching spreadsheet columns
-                let levelTasks = [{ text: "250 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" }];
-                if (i >= 30) levelTasks.push({ text: "1 bath", icon: "🛁" });
-                tasks = levelTasks;
-            } else if (i >= 35 && i <= 40) {
-                tasks.push({ text: "250 P.U", icon: "💪" }, { text: "2 DUO", icon: "🦉" }, { text: "1/2 Protein", icon: "🥤" }, { text: "1 bath", icon: "🛁" }, { text: "1 TB", icon: "📚" });
-            }
+
+            // 1. PUSH UPS (PU) RULE SCALING
+            let puReps = "200 P.U";
+            if (i >= 17 && i <= 19) puReps = "190 P.U";
+            else if (i >= 24 && i <= 59) puReps = "250 P.U";
+            else if (i >= 60 && i <= 139) puReps = "300 P.U";
+            else if (i >= 140 && i <= 195) puReps = "350 P.U";
+            else if (i >= 196 && i <= 216) puReps = "400 P.U";
+            else if (i >= 217 && i <= 229) puReps = "450 P.U";
+            else if (i >= 231) puReps = "500 P.U";
+            tasks.push({ text: puReps, icon: "💪" });
+
+            // 2. DUOLINGO SCALING 
+            if (i >= 6 && i <= 14) tasks.push({ text: "1 DUO", icon: "🦉" });
+            else if (i >= 15 && i <= 69) tasks.push({ text: "2 DUO", icon: "🦉" });
+            else if (i >= 70 && i <= 83) tasks.push({ text: "3 Duo", icon: "🦉" });
+            else if (i >= 84 && i <= 90) tasks.push({ text: "4 Duo", icon: "🦉" });
+            else if (i >= 91 && i <= 167) tasks.push({ text: "5 Duo", icon: "🦉" });
+            else if (i >= 168 && i <= 188) tasks.push({ text: "6 Duo", icon: "🦉" });
+            else if (i >= 189 && i <= 202) tasks.push({ text: "7 Duo", icon: "🦉" });
+            else if (i >= 203 && i <= 209) tasks.push({ text: "8 Duo", icon: "🦉" });
+            else if (i >= 210) tasks.push({ text: "9 Duo", icon: "🦉" });
+
+            // 3. PROTEIN POWDER SCALING
+            if (i >= 12 && i <= 145) tasks.push({ text: "1/2 Protein", icon: "🥤" });
+            else if (i >= 147 && i <= 173) tasks.push({ text: "1 Protein", icon: "🥤" });
+            else if (i >= 175) tasks.push({ text: "1.5 Protein", icon: "🥤" });
+
+            // 4. HYGIENE & BATH SCALING
+            if (i >= 30 && i <= 104) tasks.push({ text: "1 bath", icon: "🛁" });
+            else if (i >= 105) tasks.push({ text: "2 Bath", icon: "🛁" });
+
+            // 5. TEXTBOOK REVIEWS (TB)
+            if (i >= 35 && i <= 103) tasks.push({ text: "1 TB", icon: "📚" });
+            else if (i >= 105) tasks.push({ text: "2 TB", icon: "📚" });
+
+            // 6. TRACK SAVINGS
+            if (i >= 42 && i <= 46) tasks.push({ text: "50 Save", icon: "💰" });
+            else if (i >= 47 && i <= 76) tasks.push({ text: "100 SAVE", icon: "💰" });
+            else if (i >= 77 && i <= 93) tasks.push({ text: "200 SAVE", icon: "💰" });
+            else if (i >= 94 && i <= 160) tasks.push({ text: "300 SAVE", icon: "💰" });
+            else if (i >= 161 && i <= 237) tasks.push({ text: "400 SAVE", icon: "💰" });
+            else if (i >= 238) tasks.push({ text: "500 SAVE", icon: "💰" });
+
+            // 7. SKIN CARE PROGRESSION
+            if (i >= 53 && i <= 58) tasks.push({ text: "1 Moisture", icon: "🧴" });
+            else if (i >= 59 && i <= 132) tasks.push({ text: "2 Moistu 1Toner", icon: "🧴" });
+            else if (i >= 133) tasks.push({ text: "2 Moistu 1Toner", icon: "🧴" }); // stays standard format
+
+            if (i >= 64 && i <= 111) tasks.push({ text: "1 Serum", icon: "💧" });
+            else if (i >= 112) tasks.push({ text: "1 collagen 1 Serum", icon: "🧪" });
+
+            // 8. CARDIO BIKE SEGMENTS
+            if (i >= 119 && i <= 152) tasks.push({ text: "30 minute bike", icon: "🚲" });
+            else if (i >= 154) tasks.push({ text: "45 minute bike", icon: "🚲" });
+
+            // 9. SUPPLEMENTS (VITAMIN B & GLUTA)
+            if (i >= 126) tasks.push({ text: "1 VIT B complex", icon: "💊" });
+            if (i >= 182) tasks.push({ text: "1 Gluta", icon: "✨" });
 
             challengeData[i] = { tasks: tasks, isRest: false };
         }
     }
     generateGameDatabase();
 
-    // 2. STATE STORAGE MANAGEMENT (Tracks separate completion for all tasks)
-    let mainStoryLevel = 1; // The actual level you are anchored on
-    let viewingLevel = 1;  // The level currently displayed on screen (can change during preview)
+    // GAME ENGINE CONTROL REGISTRY
+    let mainStoryLevel = 1; 
+    let viewingLevel = 1;  
     
-    // Store checklist tracking state globally per level index
     let completionRegistry = {}; 
     Object.keys(challengeData).forEach(lvl => {
         completionRegistry[lvl] = [];
     });
 
-    // 3. VIEW CONTROLLER
     function switchView(viewId) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
@@ -331,14 +367,13 @@
     }
 
     function returnToMainGame() {
-        viewingLevel = mainStoryLevel; // Snap interface back to actual user story level
+        viewingLevel = mainStoryLevel; 
         document.getElementById("viewModeTag").innerText = "🎮 Game Mode";
         document.getElementById("viewModeTag").style.color = "var(--text-muted)";
         loadLevel(mainStoryLevel);
         switchView('mainView');
     }
 
-    // 4. INTERACTIVE ENGINE: RENDER TARGET LEVEL
     function loadLevel(levelNum) {
         viewingLevel = levelNum;
         const levelInfo = challengeData[levelNum];
@@ -349,129 +384,13 @@
         const restCard = document.getElementById("restDayCard");
         const logSec = document.getElementById("logSection");
 
+        if (!levelInfo) return;
+
         if (levelInfo.isRest) {
             grid.style.display = "none";
             logSec.style.display = "none";
+            restCard.style.with = "100%";
             restCard.style.display = "block";
         } else {
             grid.style.display = "grid";
-            logSec.style.display = "block";
-            restCard.style.display = "none";
-            grid.innerHTML = "";
-
-            levelInfo.tasks.forEach((task, index) => {
-                const box = document.createElement("div");
-                box.className = "task-box";
-                
-                // Keep track if it was previously checked off
-                if (completionRegistry[levelNum].includes(index)) {
-                    box.classList.add("completed");
-                }
-
-                box.innerHTML = `
-                    <span class="complete-badge">✓ COMPLETE</span>
-                    <span class="task-icon">${task.icon}</span>
-                    <span class="task-text">${task.text}</span>
-                `;
-                box.onclick = () => toggleTask(index, box, levelNum);
-                grid.appendChild(box);
-            });
-        }
-    }
-
-    // 5. MANUAL EDIT & OVERVIEW TOGGLE
-    function toggleTask(index, element, levelNum) {
-        let registry = completionRegistry[levelNum];
-
-        if (registry.includes(index)) {
-            // Uncheck action (allows full editing back and forth)
-            completionRegistry[levelNum] = registry.filter(i => i !== index);
-            element.classList.remove("completed");
-        } else {
-            // Check action
-            registry.push(index);
-            element.classList.add("completed");
-            confetti({ particleCount: 30, spread: 35, origin: { y: 0.6 } });
-
-            // Check if this action triggers a real story level up
-            const totalTasks = challengeData[levelNum].tasks.length;
-            if (registry.length === totalTasks && levelNum === mainStoryLevel) {
-                setTimeout(levelUpCelebration, 600);
-            }
-        }
-    }
-
-    // 6. CLAIM REST DAYS
-    function completeRestDay() {
-        if (viewingLevel === mainStoryLevel) {
-            levelUpCelebration();
-        } else {
-            // If they are checking off a rest day in a different preview level
-            alert(`Level ${viewingLevel} Rest day registered!`);
-        }
-    }
-
-    // 7. LEVEL UP SYSTEM
-    function levelUpCelebration() {
-        var duration = 1.5 * 1000;
-        var end = Date.now() + duration;
-
-        (function frame() {
-            confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 } });
-            confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 } });
-            if (Date.now() < end) { requestAnimationFrame(frame); }
-        }());
-
-        setTimeout(() => {
-            if (viewingLevel === mainStoryLevel) {
-                mainStoryLevel++;
-                viewingLevel = mainStoryLevel;
-            }
-            loadLevel(viewingLevel);
-        }, 1200);
-    }
-
-    // 8. RENDER NAVIGATION LIST MAP (WITH PREVIEW ROUTER)
-    function renderLevelList() {
-        const container = document.getElementById("levelHistoryList");
-        container.innerHTML = "";
-
-        Object.keys(challengeData).forEach(lvl => {
-            lvl = parseInt(lvl);
-            let statusBadge = "";
-            let itemClass = "level-list-item";
-            
-            if (lvl < mainStoryLevel) {
-                statusBadge = '<span class="status-badge badge-done">Completed</span>';
-                itemClass += " completed-level"; // Highlights yellow
-            } else if (lvl === mainStoryLevel) {
-                statusBadge = '<span class="status-badge badge-current">Active Current</span>';
-            } else {
-                statusBadge = '<span class="status-badge badge-open">Preview Available</span>';
-            }
-
-            const item = document.createElement("div");
-            item.className = itemClass;
-            item.innerHTML = `
-                <span class="list-level-num">Level ${lvl} ${challengeData[lvl].isRest ? '🌴 (Rest)' : ''}</span>
-                ${statusBadge}
-            `;
-            
-            // Clicking a list row transports you directly to view and interact with that level!
-            item.onclick = () => {
-                document.getElementById("viewModeTag").innerText = `🔍 Previewing Level ${lvl}`;
-                document.getElementById("viewModeTag").style.color = "var(--primary-yellow)";
-                loadLevel(lvl);
-                switchView('mainView');
-            };
-
-            container.appendChild(item);
-        });
-    }
-
-    // Init Engine
-    loadLevel(mainStoryLevel);
-</script>
-
-</body>
-</html>
+            log
