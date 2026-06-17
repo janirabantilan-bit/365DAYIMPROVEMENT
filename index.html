@@ -11,35 +11,30 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // -------------------------------------------------------------
-        // PASTE YOUR FIREBASE CONFIGURATION CODES RIGHT HERE:
-        // -------------------------------------------------------------
-    const firebaseConfig = {
-  apiKey: "AIzaSyA1...", 
-  authDomain: "365-level-up.firebaseapp.com",
-  projectId: "365-level-up",
-  storageBucket: "365-level-up.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+        // =============================================================
+        // ⚠️ PASTE YOUR COPIED CONFIG FROM FIREBASE DIRECTLY HERE:
+        // =============================================================
+        const firebaseConfig = {
+  apiKey: "AIzaSyAXBihsxf_oFZ8A7vj9k68-cR3rjrBH5ow",
+  authDomain: "level-up-860f4.firebaseapp.com",
+  projectId: "level-up-860f4",
+  storageBucket: "level-up-860f4.firebasestorage.app",
+  messagingSenderId: "754369686828",
+  appId: "1:754369686828:web:7ef910852ceee25af91089",
+  measurementId: "G-NT2M444JH6"
 };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Initialize Firebase safely
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (error) {
+            alert("Firebase Setup Error: Make sure you replaced the placeholders with your actual project keys! Details: " + error.message);
+        }
 
-        // Expose functions globally so buttons can click them
-        window.handleLogin = () => handleLogin(auth);
-        window.handleSignUp = () => handleSignUp(auth);
-        window.handleLogout = () => handleLogout(auth);
-        window.switchView = switchView;
-        window.returnToMainGame = returnToMainGame;
-        window.toggleTask = toggleTask;
-        window.completeRestDay = completeRestDay;
-
-        // -------------------------------------------------------------
-        // DATABASE RULES (SAME EXACT SPREADSHEET LAWS)
-        // -------------------------------------------------------------
+        // Global Challenge Data Setup
         const challengeData = {};
         const restDays = [
             7, 14, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90, 97, 104, 111, 118, 125, 
@@ -107,9 +102,6 @@
             challengeData[i] = { tasks: tasks, isRest: false };
         }
 
-        // -------------------------------------------------------------
-        // APPLICATION ENGINE STATE
-        // -------------------------------------------------------------
         let mainStoryLevel = 1; 
         let viewingLevel = 1;  
         let currentUser = null;
@@ -119,42 +111,49 @@
             completionRegistry[lvl] = [];
         });
 
-        // Track user login states
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUser = user;
-                showView("mainView");
-                await loadUserDataFromCloud();
-            } else {
-                currentUser = null;
-                showView("loginView");
-            }
-        });
-
-        // Save data to Firestore database
-        async function saveUserDataToCloud() {
-            if (!currentUser) return;
-            const userRef = doc(db, "users", currentUser.uid);
-            await setDoc(userRef, {
-                mainStoryLevel: mainStoryLevel,
-                completionRegistry: completionRegistry
+        if (auth) {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    showView("mainView");
+                    await loadUserDataFromCloud();
+                } else {
+                    currentUser = null;
+                    showView("loginView");
+                }
             });
         }
 
-        // Load data from Firestore database
-        async function loadUserDataFromCloud() {
-            if (!currentUser) return;
-            const userRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(userRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                mainStoryLevel = data.mainStoryLevel || 1;
-                completionRegistry = data.completionRegistry || completionRegistry;
+        async function saveUserDataToCloud() {
+            if (!currentUser || !db) return;
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                await setDoc(userRef, {
+                    mainStoryLevel: mainStoryLevel,
+                    completionRegistry: completionRegistry
+                });
+            } catch (e) {
+                console.error("Cloud Save Failed: ", e);
             }
-            loadLevel(mainStoryLevel);
         }
 
-        // Core App Functions
+        async function loadUserDataFromCloud() {
+            if (!currentUser || !db) return;
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(userRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    mainStoryLevel = data.mainStoryLevel || 1;
+                    completionRegistry = data.completionRegistry || completionRegistry;
+                }
+                loadLevel(mainStoryLevel);
+            } catch (e) {
+                console.error("Cloud Load Failed: ", e);
+                loadLevel(mainStoryLevel);
+            }
+        }
+
         function loadLevel(levelNum) {
             viewingLevel = levelNum;
             const levelInfo = challengeData[levelNum];
@@ -187,13 +186,13 @@
                         <span class="task-icon">${task.icon}</span>
                         <span class="task-text">${task.text}</span>
                     `;
-                    box.onclick = () => toggleTask(index, box, levelNum);
+                    box.onclick = () => window.toggleTask(index, box, levelNum);
                     grid.appendChild(box);
                 });
             }
         }
 
-        async function toggleTask(index, element, levelNum) {
+        window.toggleTask = async function(index, element, levelNum) {
             if(!completionRegistry[levelNum]) completionRegistry[levelNum] = [];
             let registry = completionRegistry[levelNum];
 
@@ -211,15 +210,15 @@
                 }
             }
             await saveUserDataToCloud();
-        }
+        };
 
-        async function completeRestDay() {
+        window.completeRestDay = function() {
             if (viewingLevel === mainStoryLevel) {
                 levelUpCelebration();
             } else {
                 alert(`Level ${viewingLevel} Rest Day Marked!`);
             }
-        }
+        };
 
         function levelUpCelebration() {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -263,44 +262,56 @@
             });
         }
 
-        // View Router
-        function switchView(viewId) {
+        window.switchView = function(viewId) {
             showView(viewId);
             if(viewId === 'listView') { renderLevelList(); }
-        }
+        };
 
         function showView(viewId) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
         }
 
-        function returnToMainGame() {
+        window.returnToMainGame = function() {
             viewingLevel = mainStoryLevel; 
             document.getElementById("viewModeTag").innerText = "🎮 Game Mode";
             document.getElementById("viewModeTag").style.color = "var(--text-muted)";
             loadLevel(mainStoryLevel);
             showView('mainView');
-        }
+        };
 
-        // AUTH HANDLERS
-        async function handleLogin(auth) {
-            const email = document.getElementById("emailInput").value;
+        // CONNECTED ACTION AUTH HANDLERS
+        window.handleLogin = async function() {
+            const email = document.getElementById("emailInput").value.trim();
             const pass = document.getElementById("passInput").value;
-            try { await signInWithEmailAndPassword(auth, email, pass); } catch(e) { alert(e.message); }
-        }
+            if(!email || !pass) { alert("Please type an email and password first!"); return; }
+            try { 
+                await signInWithEmailAndPassword(auth, email, pass); 
+            } catch(e) { 
+                alert("Login Error: " + e.message); 
+            }
+        };
 
-        async function handleSignUp(auth) {
-            const email = document.getElementById("emailInput").value;
+        window.handleSignUp = async function() {
+            const email = document.getElementById("emailInput").value.trim();
             const pass = document.getElementById("passInput").value;
-            try { await createUserWithEmailAndPassword(auth, email, pass); } catch(e) { alert(e.message); }
-        }
+            if(!email || !pass) { alert("Please fill out both entry boxes first!"); return; }
+            if(pass.length < 6) { alert("Firebase safety rules require your password to be at least 6 characters long!"); return; }
+            try { 
+                await createUserWithEmailAndPassword(auth, email, pass);
+                alert("Account created successfully!");
+            } catch(e) { 
+                alert("Sign Up Error: " + e.message); 
+            }
+        };
 
-        async function handleLogout(auth) {
-            await signOut(auth);
-        }
-    }
-    window.addEventListener('DOMContentLoaded', generateGameDatabase);
-</script>
+        window.handleLogout = async function() {
+            try { await signOut(auth); } catch(e) { alert(e.message); }
+        };
+
+        // Load baseline level interface safely
+        loadLevel(mainStoryLevel);
+    </script>
 
     <style>
         :root {
@@ -355,7 +366,6 @@
 
         .nav-btn:hover { background: #3f3f46; }
 
-        /* Auth Form Elements */
         .auth-box { display: flex; flex-direction: column; gap: 14px; margin-top: 20px;}
         .auth-input { padding: 14px; background: #222226; border: 1px solid #3f3f46; border-radius: 10px; color: white;}
         .auth-btn { background: var(--primary-yellow); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
