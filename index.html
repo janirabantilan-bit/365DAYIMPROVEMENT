@@ -5,6 +5,303 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>365 Day Level Up Challenge</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // -------------------------------------------------------------
+        // PASTE YOUR FIREBASE CONFIGURATION CODES RIGHT HERE:
+        // -------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "PASTE_YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Expose functions globally so buttons can click them
+        window.handleLogin = () => handleLogin(auth);
+        window.handleSignUp = () => handleSignUp(auth);
+        window.handleLogout = () => handleLogout(auth);
+        window.switchView = switchView;
+        window.returnToMainGame = returnToMainGame;
+        window.toggleTask = toggleTask;
+        window.completeRestDay = completeRestDay;
+
+        // -------------------------------------------------------------
+        // DATABASE RULES (SAME EXACT SPREADSHEET LAWS)
+        // -------------------------------------------------------------
+        const challengeData = {};
+        const restDays = [
+            7, 14, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90, 97, 104, 111, 118, 125, 
+            132, 139, 146, 153, 160, 167, 174, 181, 188, 195, 202, 209, 216, 223, 230, 
+            237, 244, 250, 257, 264, 271, 278, 285, 292, 299, 306, 313, 320, 327, 334, 
+            341, 348, 355, 362
+        ];
+
+        for (let i = 1; i <= 365; i++) {
+            if (restDays.includes(i)) {
+                challengeData[i] = { tasks: [], isRest: true };
+                continue;
+            }
+            let tasks = [];
+            let puReps = "200 P.U";
+            if (i >= 17 && i <= 19) puReps = "190 P.U";
+            else if (i >= 24 && i <= 59) puReps = "250 P.U";
+            else if (i >= 60 && i <= 139) puReps = "300 P.U";
+            else if (i >= 140 && i <= 195) puReps = "350 P.U";
+            else if (i >= 196 && i <= 216) puReps = "400 P.U";
+            else if (i >= 217 && i <= 229) puReps = "450 P.U";
+            else if (i >= 231) puReps = "500 P.U";
+            tasks.push({ text: puReps, icon: "💪" });
+
+            if (i >= 6 && i <= 14) tasks.push({ text: "1 DUO", icon: "🦉" });
+            else if (i >= 15 && i <= 69) tasks.push({ text: "2 DUO", icon: "🦉" });
+            else if (i >= 70 && i <= 83) tasks.push({ text: "3 Duo", icon: "🦉" });
+            else if (i >= 84 && i <= 90) tasks.push({ text: "4 Duo", icon: "🦉" });
+            else if (i >= 91 && i <= 167) tasks.push({ text: "5 Duo", icon: "🦉" });
+            else if (i >= 168 && i <= 188) tasks.push({ text: "6 Duo", icon: "🦉" });
+            else if (i >= 189 && i <= 202) tasks.push({ text: "7 Duo", icon: "🦉" });
+            else if (i >= 203 && i <= 209) tasks.push({ text: "8 Duo", icon: "🦉" });
+            else if (i >= 210) tasks.push({ text: "9 Duo", icon: "🦉" });
+
+            if (i >= 12 && i <= 145) tasks.push({ text: "1/2 Protein", icon: "🥤" });
+            else if (i >= 147 && i <= 173) tasks.push({ text: "1 Protein", icon: "🥤" });
+            else if (i >= 175) tasks.push({ text: "1.5 Protein", icon: "🥤" });
+
+            if (i >= 30 && i <= 104) tasks.push({ text: "1 bath", icon: "🛁" });
+            else if (i >= 105) tasks.push({ text: "2 Bath", icon: "🛁" });
+
+            if (i >= 35 && i <= 103) tasks.push({ text: "1 TB", icon: "📚" });
+            else if (i >= 105) tasks.push({ text: "2 TB", icon: "📚" });
+
+            if (i >= 42 && i <= 46) tasks.push({ text: "50 Save", icon: "💰" });
+            else if (i >= 47 && i <= 76) tasks.push({ text: "100 SAVE", icon: "💰" });
+            else if (i >= 77 && i <= 93) tasks.push({ text: "200 SAVE", icon: "💰" });
+            else if (i >= 94 && i <= 160) tasks.push({ text: "300 SAVE", icon: "💰" });
+            else if (i >= 161 && i <= 237) tasks.push({ text: "400 SAVE", icon: "💰" });
+            else if (i >= 238) tasks.push({ text: "500 SAVE", icon: "💰" });
+
+            if (i >= 53 && i <= 58) tasks.push({ text: "1 Moisture", icon: "🧴" });
+            else if (i >= 59 && i <= 132) tasks.push({ text: "2 Moistu 1Toner", icon: "🧴" });
+            else if (i >= 133) tasks.push({ text: "2 Moistu 1Toner", icon: "🧴" });
+
+            if (i >= 64 && i <= 111) tasks.push({ text: "1 Serum", icon: "💧" });
+            else if (i >= 112) tasks.push({ text: "1 collagen 1 Serum", icon: "🧪" });
+
+            if (i >= 119 && i <= 152) tasks.push({ text: "30 minute bike", icon: "🚲" });
+            else if (i >= 154) tasks.push({ text: "45 minute bike", icon: "🚲" });
+
+            if (i >= 126) tasks.push({ text: "1 VIT B complex", icon: "💊" });
+            if (i >= 182) tasks.push({ text: "1 Gluta", icon: "✨" });
+
+            challengeData[i] = { tasks: tasks, isRest: false };
+        }
+
+        // -------------------------------------------------------------
+        // APPLICATION ENGINE STATE
+        // -------------------------------------------------------------
+        let mainStoryLevel = 1; 
+        let viewingLevel = 1;  
+        let currentUser = null;
+        let completionRegistry = {}; 
+        
+        Object.keys(challengeData).forEach(lvl => {
+            completionRegistry[lvl] = [];
+        });
+
+        // Track user login states
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                showView("mainView");
+                await loadUserDataFromCloud();
+            } else {
+                currentUser = null;
+                showView("loginView");
+            }
+        });
+
+        // Save data to Firestore database
+        async function saveUserDataToCloud() {
+            if (!currentUser) return;
+            const userRef = doc(db, "users", currentUser.uid);
+            await setDoc(userRef, {
+                mainStoryLevel: mainStoryLevel,
+                completionRegistry: completionRegistry
+            });
+        }
+
+        // Load data from Firestore database
+        async function loadUserDataFromCloud() {
+            if (!currentUser) return;
+            const userRef = doc(db, "users", currentUser.uid);
+            const docSnap = await getDoc(userRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                mainStoryLevel = data.mainStoryLevel || 1;
+                completionRegistry = data.completionRegistry || completionRegistry;
+            }
+            loadLevel(mainStoryLevel);
+        }
+
+        // Core App Functions
+        function loadLevel(levelNum) {
+            viewingLevel = levelNum;
+            const levelInfo = challengeData[levelNum];
+            document.getElementById("currentLevelTitle").innerText = `LEVEL ${levelNum}`;
+            
+            const grid = document.getElementById("taskGrid");
+            const restCard = document.getElementById("restDayCard");
+            const logSec = document.getElementById("logSection");
+
+            if (!levelInfo) return;
+
+            if (levelInfo.isRest) {
+                grid.style.display = "none";
+                logSec.style.display = "none";
+                restCard.style.display = "block";
+            } else {
+                grid.style.display = "grid";
+                logSec.style.display = "block";
+                restCard.style.display = "none";
+                grid.innerHTML = "";
+
+                levelInfo.tasks.forEach((task, index) => {
+                    const box = document.createElement("div");
+                    box.className = "task-box";
+                    if (completionRegistry[levelNum] && completionRegistry[levelNum].includes(index)) {
+                        box.classList.add("completed");
+                    }
+                    box.innerHTML = `
+                        <span class="complete-badge">✓ DONE</span>
+                        <span class="task-icon">${task.icon}</span>
+                        <span class="task-text">${task.text}</span>
+                    `;
+                    box.onclick = () => toggleTask(index, box, levelNum);
+                    grid.appendChild(box);
+                });
+            }
+        }
+
+        async function toggleTask(index, element, levelNum) {
+            if(!completionRegistry[levelNum]) completionRegistry[levelNum] = [];
+            let registry = completionRegistry[levelNum];
+
+            if (registry.includes(index)) {
+                completionRegistry[levelNum] = registry.filter(i => i !== index);
+                element.classList.remove("completed");
+            } else {
+                registry.push(index);
+                element.classList.add("completed");
+                confetti({ particleCount: 35, spread: 40, origin: { y: 0.6 } });
+
+                const totalTasks = challengeData[levelNum].tasks.length;
+                if (registry.length === totalTasks && levelNum === mainStoryLevel) {
+                    setTimeout(levelUpCelebration, 600);
+                }
+            }
+            await saveUserDataToCloud();
+        }
+
+        async function completeRestDay() {
+            if (viewingLevel === mainStoryLevel) {
+                levelUpCelebration();
+            } else {
+                alert(`Level ${viewingLevel} Rest Day Marked!`);
+            }
+        }
+
+        function levelUpCelebration() {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            setTimeout(async () => {
+                if (viewingLevel === mainStoryLevel) {
+                    mainStoryLevel++;
+                    viewingLevel = mainStoryLevel;
+                }
+                loadLevel(viewingLevel);
+                await saveUserDataToCloud();
+            }, 1200);
+        }
+
+        function renderLevelList() {
+            const container = document.getElementById("levelHistoryList");
+            container.innerHTML = "";
+            Object.keys(challengeData).forEach(lvl => {
+                lvl = parseInt(lvl);
+                let statusBadge = "";
+                let itemClass = "level-list-item";
+                
+                if (lvl < mainStoryLevel) {
+                    statusBadge = '<span class="status-badge badge-done">Done</span>';
+                    itemClass += " completed-level";
+                } else if (lvl === mainStoryLevel) {
+                    statusBadge = '<span class="status-badge badge-current">Active</span>';
+                } else {
+                    statusBadge = '<span class="status-badge badge-open">Preview</span>';
+                }
+
+                const item = document.createElement("div");
+                item.className = itemClass;
+                item.innerHTML = `<span class="list-level-num">Day ${lvl} ${challengeData[lvl].isRest ? '🌴' : ''}</span>${statusBadge}`;
+                item.onclick = () => {
+                    document.getElementById("viewModeTag").innerText = `🔍 Preview Day ${lvl}`;
+                    document.getElementById("viewModeTag").style.color = "var(--primary-yellow)";
+                    loadLevel(lvl);
+                    showView('mainView');
+                };
+                container.appendChild(item);
+            });
+        }
+
+        // View Router
+        function switchView(viewId) {
+            showView(viewId);
+            if(viewId === 'listView') { renderLevelList(); }
+        }
+
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function returnToMainGame() {
+            viewingLevel = mainStoryLevel; 
+            document.getElementById("viewModeTag").innerText = "🎮 Game Mode";
+            document.getElementById("viewModeTag").style.color = "var(--text-muted)";
+            loadLevel(mainStoryLevel);
+            showView('mainView');
+        }
+
+        // AUTH HANDLERS
+        async function handleLogin(auth) {
+            const email = document.getElementById("emailInput").value;
+            const pass = document.getElementById("passInput").value;
+            try { await signInWithEmailAndPassword(auth, email, pass); } catch(e) { alert(e.message); }
+        }
+
+        async function handleSignUp(auth) {
+            const email = document.getElementById("emailInput").value;
+            const pass = document.getElementById("passInput").value;
+            try { await createUserWithEmailAndPassword(auth, email, pass); } catch(e) { alert(e.message); }
+        }
+
+        async function handleLogout(auth) {
+            await signOut(auth);
+        }
+    }
+    window.addEventListener('DOMContentLoaded', generateGameDatabase);
+</script>
+
     <style>
         :root {
             --bg-color: #121214;
@@ -35,11 +332,9 @@
             border: 1px solid #2a2a30;
         }
 
-        /* Views management */
         .view { display: none; }
         .view.active { display: block; }
 
-        /* Header / Navigation */
         .header {
             display: flex;
             justify-content: space-between;
@@ -60,158 +355,38 @@
 
         .nav-btn:hover { background: #3f3f46; }
 
-        /* Level Main Display */
-        .level-header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        /* Auth Form Elements */
+        .auth-box { display: flex; flex-direction: column; gap: 14px; margin-top: 20px;}
+        .auth-input { padding: 14px; background: #222226; border: 1px solid #3f3f46; border-radius: 10px; color: white;}
+        .auth-btn { background: var(--primary-yellow); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
-        .level-title {
-            font-size: 2rem;
-            color: var(--primary-yellow);
-            margin: 0;
-            font-weight: 800;
-        }
+        .level-header { text-align: center; margin-bottom: 20px; }
+        .level-title { font-size: 2rem; color: var(--primary-yellow); margin: 0; font-weight: 800; }
+        .level-status { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
 
-        .level-status {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-top: 4px;
-        }
-
-        /* Task Grid */
-        .task-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
+        .task-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
         .task-box {
-            background: #222226;
-            border: 2px solid #3f3f46;
-            border-radius: 16px;
-            padding: 16px 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 105px;
+            background: #222226; border: 2px solid #3f3f46; border-radius: 16px; padding: 16px 12px;
+            text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative;
+            overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 105px;
         }
+        .task-box:hover { transform: translateY(-2px); border-color: var(--primary-yellow); }
+        .task-box.completed { border-color: var(--success-green); background: rgba(34, 197, 94, 0.1); }
+        .task-icon { font-size: 2rem; margin-bottom: 6px; display: block; }
+        .task-text { font-weight: 600; font-size: 0.9rem; line-height: 1.2; }
+        .complete-badge { display: none; position: absolute; top: 6px; right: 8px; background: var(--success-green); color: white; font-size: 0.6rem; padding: 1px 5px; border-radius: 5px; font-weight: bold; }
+        .task-box.completed .complete-badge { display: block; }
 
-        .task-box:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-yellow);
-        }
+        .log-section { background: #222226; border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+        .log-section h3 { margin: 0 0 10px 0; font-size: 1rem; color: var(--text-muted); }
+        .log-input { width: 100%; padding: 12px; background: #121214; border: 1px solid #3f3f46; border-radius: 8px; color: white; box-sizing: border-box; margin-bottom: 10px; }
 
-        .task-box.completed {
-            border-color: var(--success-green);
-            background: rgba(34, 197, 94, 0.1);
-        }
-
-        .task-icon {
-            font-size: 2rem;
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .task-text {
-            font-weight: 600;
-            font-size: 0.9rem;
-            line-height: 1.2;
-        }
-
-        .complete-badge {
-            display: none;
-            position: absolute;
-            top: 6px;
-            right: 8px;
-            background: var(--success-green);
-            color: white;
-            font-size: 0.6rem;
-            padding: 1px 5px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        .task-box.completed .complete-badge {
-            display: block;
-        }
-
-        /* Log Book section */
-        .log-section {
-            background: #222226;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-
-        .log-section h3 {
-            margin: 0 0 10px 0;
-            font-size: 1rem;
-            color: var(--text-muted);
-        }
-
-        .log-input {
-            width: 100%;
-            padding: 12px;
-            background: #121214;
-            border: 1px solid #3f3f46;
-            border-radius: 8px;
-            color: white;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-
-        /* Rest Day Card Style */
-        .rest-day-card {
-            background: rgba(34, 197, 94, 0.1);
-            border: 2px dashed var(--success-green);
-            border-radius: 16px;
-            padding: 40px 20px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        /* Progress List View */
-        .list-title {
-            font-size: 1.5rem;
-            margin-bottom: 16px;
-        }
-
-        #levelHistoryList {
-            max-height: 500px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        .level-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #222226;
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            border: 1px solid #3f3f46;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .level-list-item:hover {
-            background: #2b2b30;
-        }
-
-        .level-list-item.completed-level {
-            border-color: var(--primary-yellow);
-            background: rgba(252, 211, 77, 0.05);
-        }
-
+        .rest-day-card { background: rgba(34, 197, 94, 0.1); border: 2px dashed var(--success-green); border-radius: 16px; padding: 40px 20px; text-align: center; margin-bottom: 24px; }
+        
+        #levelHistoryList { max-height: 500px; overflow-y: auto; padding-right: 4px; }
+        .level-list-item { display: flex; justify-content: space-between; align-items: center; background: #222226; padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #3f3f46; cursor: pointer; transition: background 0.2s; }
+        .level-list-item:hover { background: #2b2b30; }
+        .level-list-item.completed-level { border-color: var(--primary-yellow); background: rgba(252, 211, 77, 0.05); }
         .list-level-num { font-weight: bold; }
         .status-badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; }
         .badge-done { background: var(--primary-yellow); color: black; font-weight: bold; }
@@ -223,10 +398,24 @@
 
 <div class="app-container">
     
-    <div id="mainView" class="view active">
+    <div id="loginView" class="view active">
+        <h2 style="text-align: center; color: var(--primary-yellow); margin-bottom: 5px;">365 Level Up Challenge</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-top: 0; font-size: 0.9rem;">Sign in to sync your character data</p>
+        <div class="auth-box">
+            <input type="email" id="emailInput" class="auth-input" placeholder="Enter Email Address">
+            <input type="password" id="passInput" class="auth-input" placeholder="Enter Password">
+            <button class="auth-btn" onclick="window.handleLogin()">Enter Game (Login)</button>
+            <button class="nav-btn" style="padding: 12px;" onclick="window.handleSignUp()">Create New Account (Sign Up)</button>
+        </div>
+    </div>
+    
+    <div id="mainView" class="view">
         <div class="header">
             <span style="font-weight: bold; color: var(--text-muted);" id="viewModeTag">🎮 Game Mode</span>
-            <button class="nav-btn" onclick="switchView('listView')">📜 Level Map</button>
+            <div>
+                <button class="nav-btn" onclick="window.switchView('listView')">📜 Map</button>
+                <button class="nav-btn" style="background:#ef4444; color:white;" onclick="window.handleLogout()">🚪</button>
+            </div>
         </div>
 
         <div class="level-header">
@@ -234,273 +423,33 @@
             <div class="level-status" id="levelSubtitle">Complete all quests to level up</div>
         </div>
 
-        <div class="task-grid" id="taskGrid">
-            </div>
+        <div class="task-grid" id="taskGrid"></div>
 
         <div class="rest-day-card" id="restDayCard" style="display: none;">
             <span style="font-size: 3rem;">🌴</span>
             <h2>BONUS REST DAY!</h2>
             <p style="color: var(--text-muted);">Enjoy your well-deserved break.</p>
-            <button class="nav-btn" style="background: var(--success-green); color: black; width: 100%;" onclick="completeRestDay()">Claim & Level Up</button>
+            <button class="nav-btn" style="background: var(--success-green); color: black; width: 100%;" onclick="window.completeRestDay()">Claim & Level Up</button>
         </div>
 
         <div class="log-section" id="logSection">
             <h3>📝 Quick Log Notes</h3>
-            <input type="text" id="logInput" class="log-input" placeholder="Type notes here (e.g., 'Felt strong today!')">
+            <input type="text" id="logInput" class="log-input" placeholder="Type notes here...">
         </div>
     </div>
 
     <div id="listView" class="view">
         <div class="header">
             <h2 class="list-title">Journey Map (365 Days)</h2>
-            <button class="nav-btn" onclick="returnToMainGame()">🎮 Back to Game</button>
+            <button class="nav-btn" onclick="window.returnToMainGame()">🎮 Back to Game</button>
         </div>
-
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-top:-10px; margin-bottom:15px;">
             💡 Tap any level to preview challenges, interact with them early, or edit your logs!
         </p>
-
-        <div id="levelHistoryList">
-            </div>
+        <div id="levelHistoryList"></div>
     </div>
 
 </div>
-
-<script>
-    const challengeData = {};
-
-    // THE 365 SPREADSHEET ENGINE
-    function generateGameDatabase() {
-        // Precise List of all Rest Days extracted directly from your visual sheet
-        const restDays = [
-            7, 14, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90, 97, 104, 111, 118, 125, 
-            132, 139, 146, 153, 160, 167, 174, 181, 188, 195, 202, 209, 216, 223, 230, 
-            237, 244, 250, 257, 264, 271, 278, 285, 292, 299, 306, 313, 320, 327, 334, 
-            341, 348, 355, 362
-        ];
-
-        for (let i = 1; i <= 365; i++) {
-            if (restDays.includes(i)) {
-                challengeData[i] = { tasks: [], isRest: true };
-                continue;
-            }
-
-            let tasks = [];
-
-            // 1. PUSH UPS (PU) RULE SCALING
-            let puReps = "200 P.U";
-            if (i >= 17 && i <= 19) puReps = "190 P.U";
-            else if (i >= 24 && i <= 59) puReps = "250 P.U";
-            else if (i >= 60 && i <= 139) puReps = "300 P.U";
-            else if (i >= 140 && i <= 195) puReps = "350 P.U";
-            else if (i >= 196 && i <= 216) puReps = "400 P.U";
-            else if (i >= 217 && i <= 229) puReps = "450 P.U";
-            else if (i >= 231) puReps = "500 P.U";
-            tasks.push({ text: puReps, icon: "💪" });
-
-            // 2. DUOLINGO SCALING 
-            if (i >= 6 && i <= 14) tasks.push({ text: "1 DUO", icon: "🦉" });
-            else if (i >= 15 && i <= 69) tasks.push({ text: "2 DUO", icon: "🦉" });
-            else if (i >= 70 && i <= 83) tasks.push({ text: "3 Duo", icon: "🦉" });
-            else if (i >= 84 && i <= 90) tasks.push({ text: "4 Duo", icon: "🦉" });
-            else if (i >= 91 && i <= 167) tasks.push({ text: "5 Duo", icon: "🦉" });
-            else if (i >= 168 && i <= 188) tasks.push({ text: "6 Duo", icon: "🦉" });
-            else if (i >= 189 && i <= 202) tasks.push({ text: "7 Duo", icon: "🦉" });
-            else if (i >= 203 && i <= 209) tasks.push({ text: "8 Duo", icon: "🦉" });
-            else if (i >= 210) tasks.push({ text: "9 Duo", icon: "🦉" });
-
-            // 3. PROTEIN POWDER SCALING
-            if (i >= 12 && i <= 145) tasks.push({ text: "1/2 Protein", icon: "🥤" });
-            else if (i >= 147 && i <= 173) tasks.push({ text: "1 Protein", icon: "🥤" });
-            else if (i >= 175) tasks.push({ text: "1.5 Protein", icon: "🥤" });
-
-            // 4. HYGIENE & BATH SCALING
-            if (i >= 30 && i <= 104) tasks.push({ text: "1 bath", icon: "🛁" });
-            else if (i >= 105) tasks.push({ text: "2 Bath", icon: "🛁" });
-
-            // 5. TEXTBOOK REVIEWS (TB)
-            if (i >= 35 && i <= 103) tasks.push({ text: "1 TB", icon: "📚" });
-            else if (i >= 105) tasks.push({ text: "2 TB", icon: "📚" });
-
-            // 6. TRACK SAVINGS
-            if (i >= 42 && i <= 46) tasks.push({ text: "50 Save", icon: "💰" });
-            else if (i >= 47 && i <= 76) tasks.push({ text: "100 SAVE", icon: "💰" });
-            else if (i >= 77 && i <= 93) tasks.push({ text: "200 SAVE", icon: "💰" });
-            else if (i >= 94 && i <= 160) tasks.push({ text: "300 SAVE", icon: "💰" });
-            else if (i >= 161 && i <= 237) tasks.push({ text: "400 SAVE", icon: "💰" });
-            else if (i >= 238) tasks.push({ text: "500 SAVE", icon: "💰" });
-
-            // 7. SKIN CARE PROGRESSION
-            if (i >= 53 && i <= 58) tasks.push({ text: "1 Moisture", icon: "🧴" });
-            else if (i >= 59 && i <= 132) tasks.push({ text: "2 Moistu 1Toner", icon: "🧴" });
-            else if (i >= 133) tasks.push({ text: "2 Moistu 1Toner", icon: "🧴" }); // stays standard format
-
-            if (i >= 64 && i <= 111) tasks.push({ text: "1 Serum", icon: "💧" });
-            else if (i >= 112) tasks.push({ text: "1 collagen 1 Serum", icon: "🧪" });
-
-            // 8. CARDIO BIKE SEGMENTS
-            if (i >= 119 && i <= 152) tasks.push({ text: "30 minute bike", icon: "🚲" });
-            else if (i >= 154) tasks.push({ text: "45 minute bike", icon: "🚲" });
-
-            // 9. SUPPLEMENTS (VITAMIN B & GLUTA)
-            if (i >= 126) tasks.push({ text: "1 VIT B complex", icon: "💊" });
-            if (i >= 182) tasks.push({ text: "1 Gluta", icon: "✨" });
-
-            challengeData[i] = { tasks: tasks, isRest: false };
-        }
-    }
-    generateGameDatabase();
-
-    // GAME ENGINE CONTROL REGISTRY
-    let mainStoryLevel = 1; 
-    let viewingLevel = 1;  
-    
-    let completionRegistry = {}; 
-    Object.keys(challengeData).forEach(lvl => {
-        completionRegistry[lvl] = [];
-    });
-
-    function switchView(viewId) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
-        if(viewId === 'listView') { renderLevelList(); }
-    }
-
-    function returnToMainGame() {
-        viewingLevel = mainStoryLevel; 
-        document.getElementById("viewModeTag").innerText = "🎮 Game Mode";
-        document.getElementById("viewModeTag").style.color = "var(--text-muted)";
-        loadLevel(mainStoryLevel);
-        switchView('mainView');
-    }
-
-    function loadLevel(levelNum) {
-        viewingLevel = levelNum;
-        const levelInfo = challengeData[levelNum];
-        
-        document.getElementById("currentLevelTitle").innerText = `LEVEL ${levelNum}`;
-        
-        const grid = document.getElementById("taskGrid");
-        const restCard = document.getElementById("restDayCard");
-        const logSec = document.getElementById("logSection");
-
-        if (!levelInfo) return;
-
-        if (levelInfo.isRest) {
-            grid.style.display = "none";
-            logSec.style.display = "none";
-            restCard.style.with = "100%";
-            restCard.style.display = "block";
-        } else {
-            grid.style.display = "grid";
-            logSec.style.display = "block";
-            restCard.style.display = "none";
-            grid.innerHTML = "";
-
-            levelInfo.tasks.forEach((task, index) => {
-                const box = document.createElement("div");
-                box.className = "task-box";
-                
-                if (completionRegistry[levelNum].includes(index)) {
-                    box.classList.add("completed");
-                }
-
-                box.innerHTML = `
-                    <span class="complete-badge">✓ DONE</span>
-                    <span class="task-icon">${task.icon}</span>
-                    <span class="task-text">${task.text}</span>
-                `;
-                box.onclick = () => toggleTask(index, box, levelNum);
-                grid.appendChild(box);
-            });
-        }
-    }
-
-    function toggleTask(index, element, levelNum) {
-        let registry = completionRegistry[levelNum];
-
-        if (registry.includes(index)) {
-            completionRegistry[levelNum] = registry.filter(i => i !== index);
-            element.classList.remove("completed");
-        } else {
-            registry.push(index);
-            element.classList.add("completed");
-            confetti({ particleCount: 35, spread: 40, origin: { y: 0.6 } });
-
-            const totalTasks = challengeData[levelNum].tasks.length;
-            if (registry.length === totalTasks && levelNum === mainStoryLevel) {
-                setTimeout(levelUpCelebration, 600);
-            }
-        }
-    }
-
-    function completeRestDay() {
-        if (viewingLevel === mainStoryLevel) {
-            levelUpCelebration();
-        } else {
-            alert(`Level ${viewingLevel} Rest Day Marked!`);
-        }
-    }
-
-    function levelUpCelebration() {
-        var duration = 1.5 * 1000;
-        var end = Date.now() + duration;
-
-        (function frame() {
-            confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 } });
-            confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 } });
-            if (Date.now() < end) { requestAnimationFrame(frame); }
-        }());
-
-        setTimeout(() => {
-            if (viewingLevel === mainStoryLevel) {
-                mainStoryLevel++;
-                viewingLevel = mainStoryLevel;
-            }
-            loadLevel(viewingLevel);
-        }, 1200);
-    }
-
-    function renderLevelList() {
-        const container = document.getElementById("levelHistoryList");
-        container.innerHTML = "";
-
-        Object.keys(challengeData).forEach(lvl => {
-            lvl = parseInt(lvl);
-            let statusBadge = "";
-            let itemClass = "level-list-item";
-            
-            if (lvl < mainStoryLevel) {
-                statusBadge = '<span class="status-badge badge-done">Done</span>';
-                itemClass += " completed-level";
-            } else if (lvl === mainStoryLevel) {
-                statusBadge = '<span class="status-badge badge-current">Active</span>';
-            } else {
-                statusBadge = '<span class="status-badge badge-open">Preview</span>';
-            }
-
-            const item = document.createElement("div");
-            item.className = itemClass;
-            item.innerHTML = `
-                <span class="list-level-num">Day ${lvl} ${challengeData[lvl].isRest ? '🌴' : ''}</span>
-                ${statusBadge}
-            `;
-            
-            item.onclick = () => {
-                document.getElementById("viewModeTag").innerText = `🔍 Preview Day ${lvl}`;
-                document.getElementById("viewModeTag").style.color = "var(--primary-yellow)";
-                loadLevel(lvl);
-                switchView('mainView');
-            };
-
-            container.appendChild(item);
-        });
-    }
-
-    window.onload = function() {
-        loadLevel(mainStoryLevel);
-    };
-</script>
 
 </body>
 </html>
