@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>365 Day Level Up Challenge</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --card-color: #1a1a1e;
+            --primary-yellow: #fcd34d;
+            --success-green: #22c55e;
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 450px;
+            background: var(--card-color);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #2a2a30;
+        }
+
+        /* Views management */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Header / Navigation */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .nav-btn {
+            background: #2a2a30;
+            border: none;
+            color: var(--text-main);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .nav-btn:hover { background: #3f3f46; }
+
+        /* Level Main Display */
+        .level-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .level-title {
+            font-size: 2rem;
+            color: var(--primary-yellow);
+            margin: 0;
+            font-weight: 800;
+        }
+
+        .level-status {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        /* Task Grid */
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        /* If there's an odd number of tasks, make the first one wide if needed, or keep it neat */
+        .task-box {
+            background: #222226;
+            border: 2px solid #3f3f46;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-box:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-yellow);
+        }
+
+        .task-box.completed {
+            border-color: var(--success-green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .task-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .task-text {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .complete-badge {
+            display: none;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--success-green);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .task-box.completed .complete-badge {
+            display: block;
+        }
+
+        /* Log Book section */
+        .log-section {
+            background: #222226;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .log-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .log-input {
+            width: 100%;
+            padding: 12px;
+            background: #121214;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            color: white;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        /* Rest Day Card Style */
+        .rest-day-card {
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px dashed var(--success-green);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        /* Progress List View */
+        .list-title {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .level-list-item {
+            display: flex;
+            justify-content: space-between;
+            background: #222226;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #3f3f46;
+        }
+
+        .list-level-num { font-weight: bold; }
+        .status-badge { font-size: 0.85rem; padding: 2px 8px; border-radius: 20px; }
+        .badge-done { background: var(--success-green); color: black; }
+        .badge-locked { background: #3f3f46; color: var(--text-muted); }
+        .badge-current { background: var(--primary-yellow); color: black; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div id="mainView" class="view active">
+        <div class="header">
+            <span style="font-weight: bold; color: var(--text-muted);">365 RPG</span>
+            <button class="nav-btn" onclick="switchView('listView')">📜 Level Map</button>
+        </div>
+
+        <div class="level-header">
+            <h1 class="level-title" id="currentLevelTitle">LEVEL 18</h1>
+            <div class="level-status" id="levelSubtitle">Complete all quests to level up</div>
+        </div>
+
+        <div class="task-grid" id="taskGrid">
+            </div>
+
+        <div class="rest-day-card" id="restDayCard" style="display: none;">
+            <span style="font-size: 3rem;">🎉</span>
+            <h2>BONUS REST DAY!</h2>
+            <p style="color: var(--text-muted);">Enjoy your well-deserved break.</p>
+            <button class="nav-btn" style="background: var(--success-green); color: black; width: 100%;" onclick="completeRestDay()">Claim & Level Up</button>
+        </div>
+
+        <div class="log-section" id="logSection">
+            <h3>📝 Quick Log Notes</h3>
+            <input type="text" id="logInput" class="log-input" placeholder="Type notes here (e.g., 'Felt strong today!')">
+        </div>
+    </div>
+
+    <div id="listView" class="view">
+        <div class="header">
+            <h2 class="list-title">Journey Progress</h2>
+            <button class="nav-btn" onclick="switchView('mainView')">🎮 Back to Game</button>
+        </div>
+        <div id="levelHistoryList">
+            </div>
+    </div>
+
+</div>
+
+<script>
+    // 1. GAME DATA (Pulled from your exact spreadsheet layout)
+    const challengeData = {
+        18: { tasks: [{text: "190 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
+        19: { tasks: [{text: "190 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
+        20: { tasks: [], isRest: true },
+        21: { tasks: [{text: "200 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
+        22: { tasks: [{text: "200 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
+        23: { tasks: [{text: "200 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
+        24: { tasks: [{text: "250 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false },
+        25: { tasks: [{text: "250 P.U", icon: "💪"}, {text: "2 DUO", icon: "🦉"}, {text: "1/2 Protein", icon: "🥤"}], isRest: false }
+    };
+
+    // 2. APP STATE (Tracks where user currently is)
+    let userCurrentLevel = 18; 
+    let completedTasksThisLevel = [];
+
+    // 3. NAVIGATION ENGINE
+    function switchView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+        if(viewId === 'listView') { renderLevelList(); }
+    }
+
+    // 4. LOAD CURRENT LEVEL SCREEN
+    function loadLevel(levelNum) {
+        const levelInfo = challengeData[levelNum];
+        if (!levelInfo) {
+            alert("Congratulations! You've reached the end of the available levels!");
+            return;
+        }
+
+        document.getElementById("currentLevelTitle").innerText = `LEVEL ${levelNum}`;
+        document.getElementById("logInput").value = ""; // Clear logs
+        completedTasksThisLevel = [];
+
+        const grid = document.getElementById("taskGrid");
+        const restCard = document.getElementById("restDayCard");
+        const logSec = document.getElementById("logSection");
+
+        if (levelInfo.isRest) {
+            grid.style.display = "none";
+            logSec.style.display = "none";
+            restCard.style.display = "block";
+        } else {
+            grid.style.display = "grid";
+            logSec.style.display = "block";
+            restCard.style.display = "none";
+            grid.innerHTML = "";
+
+            levelInfo.tasks.forEach((task, index) => {
+                const box = document.createElement("div");
+                box.className = "task-box";
+                box.innerHTML = `
+                    <span class="complete-badge">✓ COMPLETE</span>
+                    <span class="task-icon">${task.icon}</span>
+                    <span class="task-text">${task.text}</span>
+                `;
+                box.onclick = () => toggleTask(index, box);
+                grid.appendChild(box);
+            });
+        }
+    }
+
+    // 5. INTERACTIVE TASK CLICKING
+    function toggleTask(index, element) {
+        if (completedTasksThisLevel.includes(index)) return; // Already done
+
+        completedTasksThisLevel.push(index);
+        element.classList.add("completed");
+        
+        // Single task confetti burst
+        confetti({ particleCount: 40, spread: 40, origin: { y: 0.6 } });
+
+        // Check if all level tasks are done
+        const totalTasks = challengeData[userCurrentLevel].tasks.length;
+        if (completedTasksThisLevel.length === totalTasks) {
+            setTimeout(levelUpAnimation, 800);
+        }
+    }
+
+    // 6. REST DAY LEVEL UP
+    function completeRestDay() {
+        levelUpAnimation();
+    }
+
+    // 7. LEVEL UP CELEBRATION
+    function levelUpAnimation() {
+        // Massive screen-wide confetti explosion
+        var duration = 2 * 1000;
+        var end = Date.now() + duration;
+
+        (function frame() {
+            confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 } });
+            confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 } });
+            if (Date.now() < end) { requestAnimationFrame(frame); }
+        }());
+
+        setTimeout(() => {
+            userCurrentLevel++;
+            loadLevel(userCurrentLevel);
+        }, 1500);
+    }
+
+    // 8. RENDER NAVIGATION LIST
+    function renderLevelList() {
+        const container = document.getElementById("levelHistoryList");
+        container.innerHTML = "";
+
+        Object.keys(challengeData).forEach(lvl => {
+            lvl = parseInt(lvl);
+            let statusBadge = "";
+            
+            if (lvl < userCurrentLevel) {
+                statusBadge = '<span class="status-badge badge-done">Completed</span>';
+            } else if (lvl === userCurrentLevel) {
+                statusBadge = '<span class="status-badge badge-current">Active</span>';
+            } else {
+                statusBadge = '<span class="status-badge badge-locked">Locked</span>';
+            }
+
+            const item = document.createElement("div");
+            item.className = "level-list-item";
+            item.innerHTML = `
+                <span class="list-level-num">Level ${lvl} ${challengeData[lvl].isRest ? '🌴' : ''}</span>
+                ${statusBadge}
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    // Initialize first load
+    loadLevel(userCurrentLevel);
+</script>
+
+</body>
+</html>
